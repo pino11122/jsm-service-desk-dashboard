@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Service Desk Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --sidebar-width: 240px;
+        --sidebar-bg: #0f172a;
+        --sidebar-text: #94a3b8;
+        --sidebar-active: #e2e8f0;
+        --content-bg: #f1f5f9;
+        --card-bg: #ffffff;
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --text-muted: #94a3b8;
+        --border: #e2e8f0;
+        --accent: #3b82f6;
+        --accent-hover: #2563eb;
+        --green: #10b981;
+        --green-bg: #ecfdf5;
+        --amber: #f59e0b;
+        --amber-bg: #fffbeb;
+        --red: #ef4444;
+        --red-bg: #fef2f2;
+        --blue: #3b82f6;
+        --blue-bg: #eff6ff;
+        --gray: #6b7280;
+        --radius: 8px;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+        --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+        --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+      }
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: var(--content-bg);
+        color: var(--text-primary);
+        display: flex;
+        min-height: 100vh;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: var(--sidebar-width);
+        background: var(--sidebar-bg);
+        color: var(--sidebar-text);
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 100;
+        overflow-y: auto;
+      }
+
+      .sidebar-brand {
+        padding: 20px 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+
+      .sidebar-brand .brand-logo { margin-bottom: 4px; }
+      .sidebar-brand .brand-logo svg { width: 130px; height: auto; }
+      .sidebar-brand p { font-size: 12px; color: var(--sidebar-text); }
+
+      .sidebar-section { padding: 16px 12px 8px; }
+      .sidebar-section-title {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(148,163,184,0.6);
+        padding: 0 8px;
+        margin-bottom: 6px;
+      }
+
+      .sidebar-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--sidebar-text);
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+        transition: background 0.15s, color 0.15s;
+        font-family: inherit;
+      }
+
+      .sidebar-btn:hover { background: rgba(255,255,255,0.06); color: var(--sidebar-active); }
+      .sidebar-btn.active { background: rgba(59,130,246,0.15); color: #60a5fa; }
+      .sidebar-btn .icon { width: 18px; height: 18px; opacity: 0.7; flex-shrink: 0; }
+      .sidebar-btn .count {
+        margin-left: auto;
+        background: rgba(255,255,255,0.1);
+        padding: 1px 7px;
+        border-radius: 10px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .sidebar-btn.active .count { background: rgba(59,130,246,0.25); }
+
+      .sidebar-footer {
+        margin-top: auto;
+        padding: 16px;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        font-size: 11px;
+        color: rgba(148,163,184,0.5);
+      }
+
+      /* Main content */
+      .main {
+        margin-left: var(--sidebar-width);
+        flex: 1;
+        padding: 24px 28px;
+        min-width: 0;
+      }
+
+      .page-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+      }
+
+      .page-header h1 { font-size: 22px; font-weight: 700; }
+      .page-header .subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+
+      .refresh-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 14px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        font-family: inherit;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      .refresh-btn:hover { border-color: var(--accent); box-shadow: var(--shadow); }
+      .refresh-btn svg { width: 16px; height: 16px; }
+      .refresh-btn.loading svg { animation: spin 1s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      /* KPI Cards */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .kpi-card {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        padding: 18px 20px;
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--border);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .kpi-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+      }
+
+      .kpi-card.green::before { background: var(--green); }
+      .kpi-card.amber::before { background: var(--amber); }
+      .kpi-card.red::before { background: var(--red); }
+      .kpi-card.blue::before { background: var(--accent); }
+
+      .kpi-label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+      }
+
+      .kpi-value {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-primary);
+        line-height: 1.2;
+      }
+
+      .kpi-sub {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      /* Toolbar */
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+
+      .search-box {
+        display: flex;
+        align-items: center;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 0 10px;
+        flex: 1;
+        min-width: 200px;
+        max-width: 320px;
+        transition: border-color 0.15s;
+      }
+      .search-box:focus-within { border-color: var(--accent); }
+      .search-box svg { width: 16px; height: 16px; color: var(--text-muted); flex-shrink: 0; }
+      .search-box input {
+        border: none;
+        outline: none;
+        padding: 8px;
+        font-size: 13px;
+        font-family: inherit;
+        flex: 1;
+        background: transparent;
+        color: var(--text-primary);
+      }
+
+      .filter-select {
+        padding: 8px 28px 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--card-bg);
+        font-size: 13px;
+        font-family: inherit;
+        color: var(--text-primary);
+        cursor: pointer;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 8px center;
+      }
+      .filter-select:focus { border-color: var(--accent); outline: none; }
+
+      /* Issue Table */
+      .table-container {
+        background: var(--card-bg);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
+      }
+
+      .issue-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .issue-table thead th {
+        text-align: left;
+        padding: 10px 14px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        border-bottom: 1px solid var(--border);
+        background: #f8fafc;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+        transition: color 0.15s;
+      }
+
+      .issue-table thead th:hover { color: var(--text-primary); }
+
+      .issue-table thead th .sort-arrow {
+        display: inline-block;
+        margin-left: 4px;
+        font-size: 10px;
+        opacity: 0.4;
+      }
+      .issue-table thead th.sorted .sort-arrow { opacity: 1; color: var(--accent); }
+
+      .issue-table tbody tr {
+        border-bottom: 1px solid var(--border);
+        transition: background 0.1s;
+        cursor: pointer;
+      }
+
+      .issue-table tbody tr:last-child { border-bottom: none; }
+      .issue-table tbody tr:hover { background: #f8fafc; }
+
+      .issue-table tbody td {
+        padding: 10px 14px;
+        font-size: 13px;
+        vertical-align: middle;
+      }
+
+      /* Row aging highlighting */
+      .issue-table tbody tr.stale-amber { background: #fffbeb; }
+      .issue-table tbody tr.stale-amber:hover { background: #fef3c7; }
+      .issue-table tbody tr.stale-red { background: #fef2f2; border-left: 3px solid var(--red); }
+      .issue-table tbody tr.stale-red:hover { background: #fee2e2; }
+
+      .issue-table tbody tr.unassigned-row td.assignee-cell { color: var(--red); font-weight: 600; }
+
+      /* Priority badges */
+      .priority-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 4px;
+        white-space: nowrap;
+      }
+      .priority-badge .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+      .priority-1 { background: #fef2f2; color: #991b1b; }
+      .priority-1 .dot { background: var(--red); }
+      .priority-2 { background: #fff7ed; color: #9a3412; }
+      .priority-2 .dot { background: #f97316; }
+      .priority-3 { background: #fefce8; color: #854d0e; }
+      .priority-3 .dot { background: #eab308; }
+      .priority-4 { background: #eff6ff; color: #1e40af; }
+      .priority-4 .dot { background: var(--accent); }
+      .priority-5, .priority-none { background: #f3f4f6; color: #4b5563; }
+      .priority-5 .dot, .priority-none .dot { background: #9ca3af; }
+
+      /* Status badges */
+      .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .status-new { background: #dbeafe; color: #1e40af; }
+      .status-inprogress { background: #e0e7ff; color: #3730a3; }
+      .status-waiting { background: #fef3c7; color: #92400e; }
+      .status-resolved { background: #d1fae5; color: #065f46; }
+      .status-default { background: #f3f4f6; color: #374151; }
+
+      .issue-key {
+        font-family: 'SF Mono', 'Fira Code', monospace;
+        font-weight: 600;
+        color: var(--accent);
+        font-size: 13px;
+      }
+      .issue-key:hover { text-decoration: underline; }
+
+      .issue-summary {
+        max-width: 320px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .time-relative {
+        color: var(--text-secondary);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .assignee-cell { white-space: nowrap; }
+
+      /* Loading & empty states */
+      .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px 20px;
+        color: var(--text-muted);
+      }
+
+      .loading-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid var(--border);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 12px;
+      }
+
+      .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+
+      .error-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--red);
+        background: var(--red-bg);
+        border-radius: var(--radius);
+        margin-bottom: 20px;
+      }
+
+      .table-footer {
+        padding: 10px 14px;
+        border-top: 1px solid var(--border);
+        font-size: 12px;
+        color: var(--text-muted);
+        display: flex;
+        justify-content: space-between;
+      }
+
+      /* Responsive */
+      @media (max-width: 1200px) {
+        .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      }
+
+      @media (max-width: 768px) {
+        .sidebar { display: none; }
+        .main { margin-left: 0; padding: 16px; }
+        .kpi-grid { grid-template-columns: 1fr; }
+        .issue-summary { max-width: 180px; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="130" height="70" viewBox="0 0 145.797 78.33"><path d="M0,33.71c1.31-.03,4.9.16,7.82.16,2.63,0,4.76-.15,7.62-.16l.24,1.55-2.54.28c-.71.05-.93.28-.77,1.03.43,1.83,4.36,14.2,7.12,22.02,2.57-6.94,5.99-18.04,6.61-21.39.2-1.08.11-1.51-.67-1.62a27.831,27.831,0,0,0-2.97-.3l-.17-1.58c1.12,0,3.32.16,5.21.16,1.75,0,3.8-.15,6.21-.16l.26,1.55c-3.02.05-3.77.7-5,3.48C27,43.14,22.64,55.02,18.99,66.14a24.247,24.247,0,0,0-4.82.06c-.73-2.2-3.15-9.52-5.39-16.03-2.5-7.27-3.74-10.78-4.5-12.58-.82-1.85-1.48-2.28-4.2-2.33L.01,33.71ZM47.19,66.05c-1.8,0-3.75-.16-6.77-.16-3.23,0-4.64.16-6.2.16l.02-1.55c2.63-.09,2.94-.47,3.02-1.44s.15-2.7.15-5.46V52.73c0-2.21-.02-4.32-.08-5.13s-.46-.98-2.78-.91l.05-1.57c.77-.04,2.35-.13,4.41-.3,1.93-.15,4.05-.38,5.48-.64-.06,1.17-.16,3.17-.16,7.79V57.9c0,2.79.07,3.91.14,5.03.07,1.18.42,1.37,2.74,1.56l-.02,1.55ZM40.6,33.47a3.3,3.3,0,0,1,3.59,3.62,3.488,3.488,0,0,1-3.8,3.47,3.3,3.3,0,0,1-3.48-3.42,3.527,3.527,0,0,1,3.64-3.67Zm8.37-.24a75.336,75.336,0,0,0,9.78-.83c-.1,2.6-.19,6.46-.19,10.68v9.94c1.81-.42,5.03-3.01,7.59-5.89.34-.44.33-.67-.36-.73l-2.03-.12v-1.5c1.95,0,3.83-.08,5.56-.17,1.7-.1,3.27-.22,4.66-.3v1.47c-2.61.33-3.32.68-4.39,1.38a36.291,36.291,0,0,0-4.56,3.59c1.32,2.35,5.92,10.17,7.56,12.43a2.681,2.681,0,0,0,2.15,1.17l1.39.19-.1,1.53c-1.43.03-4.26-.16-6.1-.16a20.132,20.132,0,0,0-4.2.19c-1.24-2.62-4.78-9.72-5.57-11.13a1.43,1.43,0,0,0-1.64-.84c0,3.45-.03,6.3.11,8.84.08,1.18.33,1.43,2.82,1.54l-.04,1.55c-1.73,0-3.69-.16-6.48-.16-3.36,0-4.91.16-6.36.16V64.51c2.44-.05,2.8-.47,2.86-1.33.09-.97.2-3.34.2-7.69V43.83c.05-3.46,0-6.23-.07-8.35,0-.52-.35-.7-1.07-.7l-1.56-.03.04-1.52ZM90.56,66.05c-1.8,0-3.75-.16-6.77-.16-3.23,0-4.64.16-6.2.16l.02-1.55c2.63-.09,2.94-.47,3.02-1.44s.15-2.7.15-5.46V52.73c0-2.21-.02-4.32-.08-5.13s-.47-.98-2.78-.91l.05-1.57c.77-.04,2.35-.13,4.41-.3,1.93-.15,4.05-.38,5.48-.64-.06,1.17-.16,3.17-.16,7.79V57.9c0,2.79.08,3.91.14,5.03.07,1.18.41,1.37,2.74,1.56l-.02,1.55ZM83.97,33.47a3.3,3.3,0,0,1,3.59,3.62,3.488,3.488,0,0,1-3.8,3.47,3.3,3.3,0,0,1-3.48-3.42,3.527,3.527,0,0,1,3.64-3.67h.05ZM92.29,64.5c2.37-.1,2.65-.3,2.72-1.54.11-1.51.18-3.23.18-6.05V52.99c0-2.34-.04-4.23-.15-5.53-.04-.62-.33-.78-2.53-.86l.07-1.57c1.49,0,3.38-.07,5.07-.21s3.18-.32,4.14-.47c.16.96.33,2.43.37,3.22,1.73-1.59,4.05-3.44,7.58-3.44,3.17,0,4.94,1.47,5.72,2.87a6.089,6.089,0,0,1,.71,3.07V63.15c0,1.03.23,1.1,2.86,1.34l-.04,1.55c-2-.01-3.95-.16-6.42-.16-2.98,0-4.67.16-5.66.16l.02-1.55c1.74-.1,2.04-.44,2.13-1.45.09-.98.18-2.72.18-6.6.04-6.57,0-7.17-.39-7.84a2.482,2.482,0,0,0-2.37-1.33,4.592,4.592,0,0,0-3.83,2.35,3.685,3.685,0,0,0-.52,2.16v6.5c0,1.78.04,3.49.11,4.86.07.99.37,1.2,2.33,1.34l-.03,1.55c-1.19,0-3.81-.15-6.05-.16-2.65,0-4.68.15-6.19.16V64.48Zm33.7,5.39a3.9,3.9,0,0,0-.75,2.14c0,2.18,2.03,4.3,6.84,4.3,5.91,0,8.48-2.8,8.48-5.17,0-1.46-1.08-2.33-2.71-2.34-3.53,0-7.18,0-9.54-.01-2.69,0-4.55-.65-6.13-2.59a5.79,5.79,0,0,1-1.22-3.63,7.126,7.126,0,0,1,3.47-5.79,6.853,6.853,0,0,1-1.57-4.46c0-6.02,5.51-8.19,9.67-8.19a11.231,11.231,0,0,1,5.38,1.09c1.41-1.16,3.57-2.71,5.34-2.71,1.29,0,2.49,1.04,2.49,1.76a4.836,4.836,0,0,1-2.22,2.52,7.539,7.539,0,0,0-3.1-.79,6.53,6.53,0,0,0-1.19.1,7.337,7.337,0,0,1,2.52,5.67c0,5.97-5.77,7.84-9.79,7.84-3.35,0-5.47-.84-6.34-1.6a2.662,2.662,0,0,0-1.85,2.48c0,1.11,1.1,1.76,2.35,1.76,2.61,0,6.65-.19,12.46-.19a6.306,6.306,0,0,1,4.13,1.42,6.6,6.6,0,0,1,2.21,4.57c0,7.1-7.41,10.26-14.07,10.26s-9.67-2.19-9.67-5.33c0-1.06.71-2,2.49-3,.58-.33,1.12-.63,1.61-.9l.73.8Zm6.24-24.09c-1.54,0-2.73,1.37-2.73,6.04,0,3.65.87,6.2,2.79,6.2,2.12,0,2.75-2.44,2.75-6.18,0-2.69-.49-6.06-2.76-6.06ZM105.71,34.01a1.987,1.987,0,0,0,1.98-1.99,1.851,1.851,0,0,0-.22-.88h0a1.976,1.976,0,0,0-3.16-.53,2.039,2.039,0,0,0-.57,1.13,2.582,2.582,0,0,0-.03.29,1.989,1.989,0,0,0,1.99,1.99Zm0-2.45a.508.508,0,0,1,.5.5.5.5,0,0,1-1,0,.5.5,0,0,1,.5-.5Zm4.39.52a.261.261,0,0,1,.25-.25.254.254,0,0,1,.25.25.25.25,0,0,1-.5,0Zm-4.64-.02a.25.25,0,1,1,.25.25A.248.248,0,0,1,105.46,32.06Zm-9.44,1.35a5.516,5.516,0,0,0,1.26,1.19l2.57-1.65.61.03,1.99-1.47a7.028,7.028,0,0,1-2.97-1.18L117.23,12a50.529,50.529,0,0,1-1.13,7.77,51.725,51.725,0,0,1-1.85,5.86l-6.72,5.09a2.4,2.4,0,0,1,.16.27l6.64-5.04c1.89.09,5.39.24,5.39.24l-.02,1.45-7.78,2.8a2.622,2.622,0,0,1,.22.25l7.56-2.72-.03,2.05h.03a2.146,2.146,0,0,1,1.04.27c-.01-.85-.03-1.87-.05-2.67l4.73-1.7h-.01a4.114,4.114,0,0,0,1.05-.52,5.9,5.9,0,0,0,2.11-3.46,12.172,12.172,0,0,0,.16-2.18c.04-1.74-.19-6.16-1.2-8.37-.04-.09-.08-.18-.12-.28l7.2,9.95,3.97,6.75a.412.412,0,0,1-.06.1A7.786,7.786,0,0,1,136.7,30a4.83,4.83,0,0,1-1.29.78,3.073,3.073,0,0,1,.17.31.7.7,0,0,1,.05.13,2.414,2.414,0,0,1,.08.25c.01.04.02.08.03.13a2.581,2.581,0,0,1,.04.4,2.235,2.235,0,1,1-4.47,0,.984.984,0,0,1,.02-.17.615.615,0,0,0-.14.01c0,.07.02.13.02.2a2.245,2.245,0,0,1-4.49,0v-.01h-.19c0,.06.02.12.02.18a2.235,2.235,0,1,1-4.47,0,.986.986,0,0,1,.02-.17h-.16c0,.07.02.14.02.21a2.245,2.245,0,0,1-4.49,0c0-.08.02-.16.02-.24h-.24c0,.05.02.1.02.16a2.24,2.24,0,1,1-4.48,0,1.493,1.493,0,0,1,.02-.21h-.2v.09a2.24,2.24,0,1,1-4.48,0,1.9,1.9,0,0,1,.03-.25l-.18.07h-.03c0,.05.02.11.02.16a2.235,2.235,0,1,1-4.47,0,1.1,1.1,0,0,1,.02-.18l-.12.09c-.11.08-.22.15-.33.23l-.92.65c-.29.21-.58.41-.87.62l-.41.29-.32.44-1.62,1.31a18.974,18.974,0,0,0,6.2,1.15c7.1.35,27.33-.02,29.34-.27a7.671,7.671,0,0,0,5.91-3.47c1.51-2.63,1.23-6.55-.83-11.64,0,.12.02.25.02.37a16.965,16.965,0,0,1-.25,4.33,5.981,5.981,0,0,1-.22.79L126.82,9.77a10.545,10.545,0,0,0-2.46-3.82,6.715,6.715,0,0,0-.66-.5l-3.19-4.41c0-.18-.01-.33-.01-.41l.29-.03h.99c0-.07-.12-.08-.17-.09-.03,0-.3-.05-.3-.04,0-.02.04-.04.06-.04a1.861,1.861,0,0,1,.34-.04.3.3,0,0,0,.13-.02s.07-.04.05-.04a11.072,11.072,0,0,0-1.1-.17c-.33-.16-.12-.16-.66-.16a8.918,8.918,0,0,1,.03.97l-1.43,1.56c-1.34-.93-3.17-2.21-3.41-2.39.14.24.25.48.36.72l-7.32,12.96L96.76,26.45a16.544,16.544,0,0,1-.58-4.35c-.12.55-.24,1.11-.37,1.66-.81,3.52-1.65,7.16.23,9.64Zm42.93-6.33c-.06.14-.13.28-.2.42l-2.21-3.76,2.42,3.34Zm-18.27.21c-.01-.63-.02-1.07-.02-1.07h.23c.85,0,1.8.06,2.73.01l-2.94,1.06Zm2.3-22.26c-.78-.44-1.63-.8-2.38-1.21,0-.32-.06-1.38-.09-2.21l2.48,3.42Zm-2.83-3.61c0,.76,0,1.63-.02,2.09,0,0-.49-.34-1.16-.81l1.18-1.28Zm-4.34-.2a20.626,20.626,0,0,1,.76,2.88c.04.16.08.37.13.61l-7.43,8.09,6.54-11.58ZM108.6,14l8.17-8.9a47.708,47.708,0,0,1,.5,6.41L99.85,29.5Zm-.93,1.01-8.5,15.05a7.833,7.833,0,0,1-1.22-1.35,8.529,8.529,0,0,1-.77-1.22l4.42-5.84h0l6.09-6.64Zm-8.22,8.95-2.43,3.21c-.06-.13-.11-.26-.16-.39l2.59-2.82ZM98,35.91l-.69.57-.18.15c-.04.04-.08.07-.12.11-.21.2-.43.4-.65.59-.13.11-.26.21-.39.32-.05.04-.1.08-.16.12s-.11.08-.17.12c-.12.08-.23.16-.35.24-.29.19-.58.38-.88.55a5.608,5.608,0,0,1-.88.45,1.425,1.425,0,0,1-.35.11.393.393,0,0,1-.24,0c-.23-.09-.36-1.4-.04-1.61.42-.29.95-.64,1.44-.97l1.55-.89c.15-.1.3-.19.45-.29.18-.12.36-.23.54-.35.24-.16.49-.3.73-.46.61-.39,1.21-.78,1.82-1.17.16-.1.32-.2.48-.31l.62.03.45-.33c.3-.23.61-.45.91-.68.07-.05.14-.1.21-.16.56-.41,1.11-.83,1.69-1.21a2.135,2.135,0,0,0-.27.66c-.54.37-1.08.75-1.61,1.13-.29.2-.57.41-.86.61-.13.09-.25.18-.38.27l-.33.45c-.19.16-.39.32-.58.48L98.23,35.7c-.08.07-.16.13-.24.2Zm35.28-3.87a.25.25,0,1,1,.25.25A.248.248,0,0,1,133.28,32.04Zm-4.59.04a.252.252,0,0,1,.24-.25.25.25,0,0,1,0,.5A.239.239,0,0,1,128.69,32.08Zm.24,1.96a1.99,1.99,0,1,0-1.99-1.99A2,2,0,0,0,128.93,34.04Zm0-2.46a.5.5,0,0,1,0,1,.487.487,0,0,1-.49-.5.493.493,0,0,1,.49-.5Zm4.6,2.41A1.99,1.99,0,1,0,131.54,32,1.987,1.987,0,0,0,133.53,33.99Zm0-2.45a.5.5,0,0,1,.5.5.5.5,0,1,1-.5-.5Zm12.23-18.13c-.07-.38-2.44.38-3.43.14-.3-.07-.19-.42-.41-.45a.8.8,0,0,0-.63.25c-.19.19-.24.33-.44.47s-.43.25-.61.4a1.463,1.463,0,0,0-.36.6,8.511,8.511,0,0,0-.56,2.38,16.925,16.925,0,0,0,.15,3.26c2.26,5.4,2.7,9.75,1.11,12.53a7.923,7.923,0,0,1-6.09,3.6c-1.43.18-11.98.41-20.55.41-3.55,0-6.76-.04-8.84-.14a19.071,19.071,0,0,1-6.4-1.22l-1.14.93a29.281,29.281,0,0,0,7.41,1.33c4.6.31,22.52.04,25.76-.05,3.53-.1,6-.15,8.14-1.32a6.733,6.733,0,0,0,3.46-3.51,5.847,5.847,0,0,0,.64-3.41,22.741,22.741,0,0,0-.43-4.06c-.04-.27-.14-.64-.22-.97-.29-1.24-.8-2.42-1.16-3.64-.18-.62-.28-1.24-.41-1.87a5.361,5.361,0,0,1-.16-1.95,1.364,1.364,0,0,1,.73-1.11,1.955,1.955,0,0,1,.72-.09c.49,0,.99.02,1.48.03h.74a1.943,1.943,0,0,0,.68-.06.405.405,0,0,0,.09-.05l.02-.02a.555.555,0,0,0,.06-.08,3.409,3.409,0,0,0,.65-2.34Zm-.93,2.09a1.335,1.335,0,0,1-.17.05,6.756,6.756,0,0,1-1.19,0c-.12,0-.9,0-.71-.27a.345.345,0,0,1,.12-.09,15.816,15.816,0,0,1,2.17-.8c.54.03-.01.96-.23,1.11ZM110.36,34.04a1.989,1.989,0,0,0,1.99-1.99v-.09a1.989,1.989,0,0,0-.7-1.42h0a1.949,1.949,0,0,0-1.28-.48,2,2,0,0,0-1.96,1.65,1.87,1.87,0,0,0-.03.34,1.989,1.989,0,0,0,1.99,1.99Zm0-2.46a.508.508,0,0,1,.5.5.5.5,0,0,1-.5.5.5.5,0,0,1-.5-.5.5.5,0,0,1,.5-.5ZM93.02,19.87a1.477,1.477,0,0,1-.81-.99,1.789,1.789,0,0,1,.22-1.51,1.766,1.766,0,0,1,.87-.78,2.153,2.153,0,0,1,1.64-.04,1.917,1.917,0,0,1,.75.47,2.394,2.394,0,0,1,.41,1.55c0,1.06.02,1.98.04,2.8-.18.77-.44,1.71-.59,2.34-.82,3.58-1.68,7.28.27,9.85a5.807,5.807,0,0,0,1.23,1.19l-1.24.79a5.352,5.352,0,0,1-2.1-2.82,12.761,12.761,0,0,1-.13-5.96c.06-.32.12-.64.18-.95.23-1.14.57-2.25.82-3.38s.48-2.25.69-3.37c.14-.75.19-1.64-.95-1.88a1.185,1.185,0,0,0-1.4.81.963.963,0,0,0,.16,1.04.827.827,0,0,0,1.05.16.7.7,0,0,0,.24-1c-.19-.15-.28-.15-.48.05a.788.788,0,0,0-.07.37c0,.09-.6.09-.59-.07a.9.9,0,0,1,.2-.68.844.844,0,0,1,1.27-.07,1.434,1.434,0,0,1-.29,2.01,1.384,1.384,0,0,1-1.39.08ZM115,34.16a1.989,1.989,0,0,0,1.99-1.99,1,1,0,0,0-.02-.16,1.983,1.983,0,0,0-3.95-.04c0,.07-.02.13-.02.2a1.989,1.989,0,0,0,1.99,1.99Zm0-2.45a.5.5,0,0,1,.5.5.5.5,0,0,1-.5.5.487.487,0,0,1-.49-.5A.493.493,0,0,1,115,31.71Zm9.29,2.49a1.99,1.99,0,1,0-1.98-1.99A1.989,1.989,0,0,0,124.29,34.2Zm0-2.45a.5.5,0,1,1-.49.5A.5.5,0,0,1,124.29,31.75Zm-9.54.46a.246.246,0,0,1,.24-.25.254.254,0,0,1,.25.25.248.248,0,0,1-.25.25A.239.239,0,0,1,114.75,32.21Zm4.69.08a.248.248,0,0,1,.25-.25.239.239,0,0,1,.24.25.246.246,0,0,1-.24.25A.254.254,0,0,1,119.44,32.29Zm4.6-.04a.252.252,0,0,1,.24-.25.25.25,0,0,1,0,.5A.239.239,0,0,1,124.04,32.25Zm-4.35,1.99a1.99,1.99,0,1,0-2-1.99A1.989,1.989,0,0,0,119.69,34.24Zm0-2.45a.5.5,0,0,1,0,1,.5.5,0,0,1-.5-.5A.5.5,0,0,1,119.69,31.79Zm-17.7,1.49-.02.02" fill="#fff"/></svg>
+        </div>
+        <p style="margin-top: 8px; font-size: 12px;">Service Desk</p>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Quick Filters</div>
+        <button class="sidebar-btn active" data-filter="all" onclick="setSidebarFilter('all')">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          All Tickets
+          <span class="count" id="count-all">0</span>
+        </button>
+        <button class="sidebar-btn" data-filter="unassigned" onclick="setSidebarFilter('unassigned')">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.38 8.38 0 0 1 13 0"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          Unassigned
+          <span class="count" id="count-unassigned">0</span>
+        </button>
+        <button class="sidebar-btn" data-filter="critical" onclick="setSidebarFilter('critical')">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Critical / High
+          <span class="count" id="count-critical">0</span>
+        </button>
+        <button class="sidebar-btn" data-filter="stale" onclick="setSidebarFilter('stale')">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Stale (3+ days)
+          <span class="count" id="count-stale">0</span>
+        </button>
+      </div>
+
+      <div class="sidebar-footer">
+        Auto-refresh every 60s
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main">
+      <div class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p class="subtitle" id="last-updated">Loading...</p>
+        </div>
+        <button class="refresh-btn" id="refresh-btn" onclick="loadData()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card blue" id="kpi-open">
+          <div class="kpi-label">Open Issues</div>
+          <div class="kpi-value" id="kpi-open-val">--</div>
+          <div class="kpi-sub" id="kpi-open-sub">Loading...</div>
+        </div>
+        <div class="kpi-card" id="kpi-ttfr">
+          <div class="kpi-label">Avg Time to First Response</div>
+          <div class="kpi-value" id="kpi-ttfr-val">--</div>
+          <div class="kpi-sub">All time</div>
+        </div>
+        <div class="kpi-card" id="kpi-ttfr7">
+          <div class="kpi-label">Avg First Response (7d)</div>
+          <div class="kpi-value" id="kpi-ttfr7-val">--</div>
+          <div class="kpi-sub">Last 7 days</div>
+        </div>
+        <div class="kpi-card" id="kpi-ttr7">
+          <div class="kpi-label">Avg Resolution Time (7d)</div>
+          <div class="kpi-value" id="kpi-ttr7-val">--</div>
+          <div class="kpi-sub" id="kpi-ttr7-sub">Last 7 days</div>
+        </div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="search-input" placeholder="Search tickets..." oninput="applyFilters()" />
+        </div>
+        <select class="filter-select" id="filter-status" onchange="applyFilters()">
+          <option value="">All Statuses</option>
+        </select>
+        <select class="filter-select" id="filter-assignee" onchange="applyFilters()">
+          <option value="">All Assignees</option>
+        </select>
+        <select class="filter-select" id="filter-type" onchange="applyFilters()">
+          <option value="">All Types</option>
+        </select>
+      </div>
+
+      <!-- Table -->
+      <div class="table-container">
+        <div id="loading-area">
+          <div class="loading-state">
+            <div class="loading-spinner"></div>
+            Loading tickets...
+          </div>
+        </div>
+        <table class="issue-table" id="issue-table" style="display:none">
+          <thead>
+            <tr>
+              <th data-sort="key" onclick="sortBy('key')">Key <span class="sort-arrow">&#9650;</span></th>
+              <th data-sort="priority" onclick="sortBy('priority')">Priority <span class="sort-arrow">&#9650;</span></th>
+              <th data-sort="summary" onclick="sortBy('summary')">Summary <span class="sort-arrow">&#9650;</span></th>
+              <th data-sort="status" onclick="sortBy('status')">Status <span class="sort-arrow">&#9650;</span></th>
+              <th data-sort="type" onclick="sortBy('type')">Type <span class="sort-arrow">&#9650;</span></th>
+              <th data-sort="assignee" onclick="sortBy('assignee')">Assignee <span class="sort-arrow">&#9650;</span></th>
+              <th data-sort="created" onclick="sortBy('created')">Age <span class="sort-arrow">&#9650;</span></th>
+              <th data-sort="ttfr" onclick="sortBy('ttfr')">TTR <span class="sort-arrow">&#9650;</span></th>
+              <th data-sort="updated" onclick="sortBy('updated')">Updated <span class="sort-arrow">&#9650;</span></th>
+            </tr>
+          </thead>
+          <tbody id="issue-tbody"></tbody>
+        </table>
+        <div class="table-footer" id="table-footer" style="display:none">
+          <span id="showing-count">Showing 0 tickets</span>
+          <span id="filter-info"></span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Global state
+      let allIssues = [];
+      let browseBase = '';
+      let currentSort = { field: 'created', dir: 'desc' };
+      let sidebarFilter = 'all';
+
+      // Helpers
+      function msToHuman(ms) {
+        if (ms == null) return '--';
+        const secs = Math.round(ms / 1000);
+        const days = Math.floor(secs / 86400);
+        const hrs = Math.floor((secs % 86400) / 3600);
+        const mins = Math.floor((secs % 3600) / 60);
+        if (days > 0) return days + 'd ' + hrs + 'h';
+        if (hrs > 0) return hrs + 'h ' + mins + 'm';
+        return mins + 'm';
+      }
+
+      function relativeTime(dateStr) {
+        if (!dateStr) return '--';
+        const now = Date.now();
+        const d = new Date(dateStr).getTime();
+        const diffMs = now - d;
+        const mins = Math.floor(diffMs / 60000);
+        const hrs = Math.floor(diffMs / 3600000);
+        const days = Math.floor(diffMs / 86400000);
+        if (mins < 1) return 'just now';
+        if (mins < 60) return mins + 'm ago';
+        if (hrs < 24) return hrs + 'h ago';
+        if (days < 30) return days + 'd ago';
+        return Math.floor(days / 30) + 'mo ago';
+      }
+
+      function getPriorityId(issue) {
+        const p = issue.fields && issue.fields.priority;
+        if (!p) return 99;
+        const id = parseInt(p.id, 10);
+        return isNaN(id) ? 99 : id;
+      }
+
+      function getPriorityName(issue) {
+        const p = issue.fields && issue.fields.priority;
+        return p && p.name ? p.name : 'None';
+      }
+
+      function getPriorityClass(issue) {
+        const id = getPriorityId(issue);
+        if (id === 1) return 'priority-1';
+        if (id === 2) return 'priority-2';
+        if (id === 3) return 'priority-3';
+        if (id === 4) return 'priority-4';
+        if (id === 5) return 'priority-5';
+        return 'priority-none';
+      }
+
+      function getStatusClass(statusName) {
+        if (!statusName) return 'status-default';
+        const s = statusName.toLowerCase();
+        if (s.includes('open') || s.includes('new') || s.includes('to do') || s.includes('backlog')) return 'status-new';
+        if (s.includes('progress') || s.includes('review') || s.includes('dev')) return 'status-inprogress';
+        if (s.includes('wait') || s.includes('pending') || s.includes('hold') || s.includes('blocked')) return 'status-waiting';
+        if (s.includes('done') || s.includes('resolved') || s.includes('closed') || s.includes('complete')) return 'status-resolved';
+        return 'status-default';
+      }
+
+      function getField(issue, path) {
+        return issue.fields ? issue.fields[path] : undefined;
+      }
+
+      function getAgeDays(issue) {
+        const c = getField(issue, 'created');
+        if (!c) return 0;
+        return (Date.now() - new Date(c).getTime()) / 86400000;
+      }
+
+      function getUpdatedDays(issue) {
+        const u = getField(issue, 'updated');
+        if (!u) return 0;
+        return (Date.now() - new Date(u).getTime()) / 86400000;
+      }
+
+      // SLA color logic for KPI cards
+      function slaColor(ms, thresholds) {
+        if (ms == null) return '';
+        const hrs = ms / 3600000;
+        if (hrs <= thresholds.green) return 'green';
+        if (hrs <= thresholds.amber) return 'amber';
+        return 'red';
+      }
+
+      // Sorting
+      function sortBy(field) {
+        if (currentSort.field === field) {
+          currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
+        } else {
+          currentSort.field = field;
+          currentSort.dir = field === 'priority' ? 'asc' : 'desc';
+        }
+        renderTable();
+        updateSortIndicators();
+      }
+
+      function updateSortIndicators() {
+        document.querySelectorAll('.issue-table thead th').forEach(function(th) {
+          const sortField = th.getAttribute('data-sort');
+          const arrow = th.querySelector('.sort-arrow');
+          if (sortField === currentSort.field) {
+            th.classList.add('sorted');
+            arrow.innerHTML = currentSort.dir === 'asc' ? '&#9650;' : '&#9660;';
+          } else {
+            th.classList.remove('sorted');
+            arrow.innerHTML = '&#9650;';
+          }
+        });
+      }
+
+      function compareFn(a, b) {
+        var va, vb;
+        var field = currentSort.field;
+        switch (field) {
+          case 'key':
+            va = a.key || ''; vb = b.key || ''; break;
+          case 'priority':
+            va = getPriorityId(a); vb = getPriorityId(b); break;
+          case 'summary':
+            va = (getField(a, 'summary') || '').toLowerCase();
+            vb = (getField(b, 'summary') || '').toLowerCase(); break;
+          case 'status':
+            va = (getField(a, 'status') ? a.fields.status.name : '').toLowerCase();
+            vb = (getField(b, 'status') ? b.fields.status.name : '').toLowerCase(); break;
+          case 'type':
+            va = (getField(a, 'issuetype') ? a.fields.issuetype.name : '').toLowerCase();
+            vb = (getField(b, 'issuetype') ? b.fields.issuetype.name : '').toLowerCase(); break;
+          case 'assignee':
+            va = (getField(a, 'assignee') ? a.fields.assignee.displayName : 'ZZZ').toLowerCase();
+            vb = (getField(b, 'assignee') ? b.fields.assignee.displayName : 'ZZZ').toLowerCase(); break;
+          case 'created':
+            va = getField(a, 'created') ? new Date(a.fields.created).getTime() : 0;
+            vb = getField(b, 'created') ? new Date(b.fields.created).getTime() : 0; break;
+          case 'ttfr':
+            va = a.timeToFirstMs != null ? a.timeToFirstMs : Infinity;
+            vb = b.timeToFirstMs != null ? b.timeToFirstMs : Infinity; break;
+          case 'updated':
+            va = getField(a, 'updated') ? new Date(a.fields.updated).getTime() : 0;
+            vb = getField(b, 'updated') ? new Date(b.fields.updated).getTime() : 0; break;
+          default:
+            va = 0; vb = 0;
+        }
+        var cmp = 0;
+        if (va < vb) cmp = -1;
+        else if (va > vb) cmp = 1;
+        return currentSort.dir === 'asc' ? cmp : -cmp;
+      }
+
+      // Filtering
+      function getFilteredIssues() {
+        var search = document.getElementById('search-input').value.toLowerCase();
+        var statusFilter = document.getElementById('filter-status').value;
+        var assigneeFilter = document.getElementById('filter-assignee').value;
+        var typeFilter = document.getElementById('filter-type').value;
+
+        var issues = allIssues.filter(function(issue) {
+          // Sidebar filter
+          if (sidebarFilter === 'unassigned') {
+            if (getField(issue, 'assignee')) return false;
+          } else if (sidebarFilter === 'critical') {
+            var pid = getPriorityId(issue);
+            if (pid > 2) return false;
+          } else if (sidebarFilter === 'stale') {
+            if (getUpdatedDays(issue) < 3) return false;
+          }
+
+          // Search
+          if (search) {
+            var summary = (getField(issue, 'summary') || '').toLowerCase();
+            var key = (issue.key || '').toLowerCase();
+            if (summary.indexOf(search) === -1 && key.indexOf(search) === -1) return false;
+          }
+
+          // Status
+          if (statusFilter) {
+            var s = getField(issue, 'status');
+            if (!s || s.name !== statusFilter) return false;
+          }
+
+          // Assignee
+          if (assigneeFilter) {
+            var a = getField(issue, 'assignee');
+            if (assigneeFilter === '__unassigned__') {
+              if (a) return false;
+            } else {
+              if (!a || a.displayName !== assigneeFilter) return false;
+            }
+          }
+
+          // Type
+          if (typeFilter) {
+            var t = getField(issue, 'issuetype');
+            if (!t || t.name !== typeFilter) return false;
+          }
+
+          return true;
+        });
+
+        return issues;
+      }
+
+      function applyFilters() {
+        renderTable();
+      }
+
+      function setSidebarFilter(filter) {
+        sidebarFilter = filter;
+        document.querySelectorAll('.sidebar-btn').forEach(function(btn) {
+          btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
+        });
+        applyFilters();
+      }
+
+      // Populate filter dropdowns
+      function populateFilters() {
+        var statuses = {};
+        var assignees = {};
+        var types = {};
+        var hasUnassigned = false;
+
+        allIssues.forEach(function(issue) {
+          var s = getField(issue, 'status');
+          if (s && s.name) statuses[s.name] = true;
+
+          var a = getField(issue, 'assignee');
+          if (a && a.displayName) assignees[a.displayName] = true;
+          else hasUnassigned = true;
+
+          var t = getField(issue, 'issuetype');
+          if (t && t.name) types[t.name] = true;
+        });
+
+        var statusSel = document.getElementById('filter-status');
+        var curStatus = statusSel.value;
+        statusSel.innerHTML = '<option value="">All Statuses</option>';
+        Object.keys(statuses).sort().forEach(function(s) {
+          statusSel.innerHTML += '<option value="' + s + '">' + s + '</option>';
+        });
+        statusSel.value = curStatus;
+
+        var assigneeSel = document.getElementById('filter-assignee');
+        var curAssignee = assigneeSel.value;
+        assigneeSel.innerHTML = '<option value="">All Assignees</option>';
+        if (hasUnassigned) assigneeSel.innerHTML += '<option value="__unassigned__">Unassigned</option>';
+        Object.keys(assignees).sort().forEach(function(a) {
+          assigneeSel.innerHTML += '<option value="' + a + '">' + a + '</option>';
+        });
+        assigneeSel.value = curAssignee;
+
+        var typeSel = document.getElementById('filter-type');
+        var curType = typeSel.value;
+        typeSel.innerHTML = '<option value="">All Types</option>';
+        Object.keys(types).sort().forEach(function(t) {
+          typeSel.innerHTML += '<option value="' + t + '">' + t + '</option>';
+        });
+        typeSel.value = curType;
+      }
+
+      // Update sidebar counts
+      function updateSidebarCounts() {
+        document.getElementById('count-all').textContent = allIssues.length;
+
+        var unassigned = allIssues.filter(function(i) { return !getField(i, 'assignee'); }).length;
+        document.getElementById('count-unassigned').textContent = unassigned;
+
+        var critical = allIssues.filter(function(i) { return getPriorityId(i) <= 2; }).length;
+        document.getElementById('count-critical').textContent = critical;
+
+        var stale = allIssues.filter(function(i) { return getUpdatedDays(i) >= 3; }).length;
+        document.getElementById('count-stale').textContent = stale;
+      }
+
+      // Render table
+      function renderTable() {
+        var filtered = getFilteredIssues();
+        filtered.sort(compareFn);
+
+        var tbody = document.getElementById('issue-tbody');
+        if (filtered.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="empty-state">No tickets match the current filters.</td></tr>';
+        } else {
+          tbody.innerHTML = filtered.map(function(issue) {
+            var key = issue.key || '';
+            var summary = getField(issue, 'summary') || '';
+            var statusObj = getField(issue, 'status');
+            var statusName = statusObj ? statusObj.name : '';
+            var typeObj = getField(issue, 'issuetype');
+            var typeName = typeObj ? typeObj.name : '';
+            var assigneeObj = getField(issue, 'assignee');
+            var assigneeName = assigneeObj ? assigneeObj.displayName : 'Unassigned';
+            var isUnassigned = !assigneeObj;
+            var created = getField(issue, 'created');
+            var updated = getField(issue, 'updated');
+            var updatedDays = getUpdatedDays(issue);
+            var url = browseBase ? browseBase + '/browse/' + key : '#';
+
+            var rowClass = '';
+            if (updatedDays >= 7) rowClass = 'stale-red';
+            else if (updatedDays >= 3) rowClass = 'stale-amber';
+            if (isUnassigned) rowClass += ' unassigned-row';
+
+            var createdFull = created ? new Date(created).toLocaleString() : '';
+            var updatedFull = updated ? new Date(updated).toLocaleString() : '';
+
+            return '<tr class="' + rowClass + '" onclick="window.open(\'' + url + '\', \'_blank\')">'
+              + '<td><span class="issue-key">' + key + '</span></td>'
+              + '<td><span class="priority-badge ' + getPriorityClass(issue) + '"><span class="dot"></span>' + getPriorityName(issue) + '</span></td>'
+              + '<td><span class="issue-summary" title="' + summary.replace(/"/g, '&quot;') + '">' + escapeHtml(summary) + '</span></td>'
+              + '<td><span class="status-badge ' + getStatusClass(statusName) + '">' + statusName + '</span></td>'
+              + '<td>' + typeName + '</td>'
+              + '<td class="assignee-cell">' + assigneeName + '</td>'
+              + '<td class="time-relative" title="' + createdFull + '">' + relativeTime(created) + '</td>'
+              + '<td class="time-relative">' + msToHuman(issue.timeToFirstMs) + '</td>'
+              + '<td class="time-relative" title="' + updatedFull + '">' + relativeTime(updated) + '</td>'
+              + '</tr>';
+          }).join('');
+        }
+
+        document.getElementById('showing-count').textContent = 'Showing ' + filtered.length + ' of ' + allIssues.length + ' tickets';
+        var activeFilters = [];
+        if (sidebarFilter !== 'all') activeFilters.push(sidebarFilter);
+        if (document.getElementById('search-input').value) activeFilters.push('search');
+        if (document.getElementById('filter-status').value) activeFilters.push('status');
+        if (document.getElementById('filter-assignee').value) activeFilters.push('assignee');
+        if (document.getElementById('filter-type').value) activeFilters.push('type');
+        document.getElementById('filter-info').textContent = activeFilters.length ? 'Filters: ' + activeFilters.join(', ') : '';
+
+        updateSortIndicators();
+      }
+
+      function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str));
+        return div.innerHTML;
+      }
+
+      // KPI rendering
+      function renderKPIs(data) {
+        var openCount = allIssues.length;
+        document.getElementById('kpi-open-val').textContent = openCount;
+        var unassigned = allIssues.filter(function(i) { return !getField(i, 'assignee'); }).length;
+        document.getElementById('kpi-open-sub').textContent = unassigned + ' unassigned';
+
+        // TTR All
+        var ttfrCard = document.getElementById('kpi-ttfr');
+        if (data.avgTTRMs != null) {
+          document.getElementById('kpi-ttfr-val').textContent = msToHuman(data.avgTTRMs);
+          var col = slaColor(data.avgTTRMs, { green: 4, amber: 12 });
+          ttfrCard.className = 'kpi-card ' + col;
+        } else {
+          document.getElementById('kpi-ttfr-val').textContent = 'N/A';
+          ttfrCard.className = 'kpi-card';
+        }
+
+        // TTR 7d
+        var ttfr7Card = document.getElementById('kpi-ttfr7');
+        if (data.avgTTR7dMs != null) {
+          document.getElementById('kpi-ttfr7-val').textContent = msToHuman(data.avgTTR7dMs);
+          var col7 = slaColor(data.avgTTR7dMs, { green: 4, amber: 12 });
+          ttfr7Card.className = 'kpi-card ' + col7;
+        } else {
+          document.getElementById('kpi-ttfr7-val').textContent = 'N/A';
+          ttfr7Card.className = 'kpi-card';
+        }
+
+        // Resolution 7d
+        var ttr7Card = document.getElementById('kpi-ttr7');
+        if (data.avgTimeToResolution7dMs != null) {
+          document.getElementById('kpi-ttr7-val').textContent = msToHuman(data.avgTimeToResolution7dMs);
+          var colRes = slaColor(data.avgTimeToResolution7dMs, { green: 24, amber: 72 });
+          ttr7Card.className = 'kpi-card ' + colRes;
+        } else {
+          document.getElementById('kpi-ttr7-val').textContent = 'N/A';
+          ttr7Card.className = 'kpi-card';
+        }
+        var resSub = document.getElementById('kpi-ttr7-sub');
+        if (resSub) {
+          resSub.textContent = data.avgTimeToResolutionMs != null
+            ? 'All time (30d): ' + msToHuman(data.avgTimeToResolutionMs)
+            : 'Last 7 days';
+        }
+      }
+
+      // Main load
+      async function loadData() {
+        var btn = document.getElementById('refresh-btn');
+        btn.classList.add('loading');
+
+        try {
+          var res = await fetch('/api/issues');
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          var data = await res.json();
+
+          allIssues = data.issues || [];
+          browseBase = data.browseBase || '';
+
+          document.getElementById('loading-area').style.display = 'none';
+          document.getElementById('issue-table').style.display = '';
+          document.getElementById('table-footer').style.display = '';
+
+          populateFilters();
+          updateSidebarCounts();
+          renderKPIs(data);
+          renderTable();
+
+          document.getElementById('last-updated').textContent = 'Last updated: ' + new Date().toLocaleTimeString() + ' \u2022 ' + allIssues.length + ' tickets';
+        } catch (err) {
+          document.getElementById('loading-area').innerHTML = '<div class="error-state">Error loading tickets: ' + (err.message || err) + '</div>';
+          document.getElementById('loading-area').style.display = '';
+        } finally {
+          btn.classList.remove('loading');
+        }
+      }
+
+      // Init
+      loadData();
+      setInterval(loadData, 60000);
+    </script>
+  </body>
+</html>
